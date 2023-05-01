@@ -1,0 +1,6 @@
+#pragma once
+#include <string_view>
+
+namespace capo {
+constexpr auto version_v = std::string_view{"@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@"};
+}
