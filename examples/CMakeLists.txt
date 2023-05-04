@@ -14,9 +14,4 @@ target_link_libraries(${PROJECT_NAME}-music PRIVATE
 )
 target_sources(${PROJECT_NAME}-music PRIVATE music.cpp)
 
-add_executable(${PROJECT_NAME}-interactive)
-target_link_libraries(${PROJECT_NAME}-interactive PRIVATE
-  capo::lite
-  capo::compile-options
-)
-target_sources(${PROJECT_NAME}-interactive PRIVATE interactive.cpp)
+add_subdirectory(player)

@@ -7,7 +7,6 @@ out/*
 
 CMakeSettings.json
 compile_commands.json
-/CMakePresets.json
 /CMakeUserPresets.json
 
 # Test files
@@ -15,4 +14,6 @@ compile_commands.json
 **.mp3
 **.ogg
 **.flac
-/capo_playlist.txt
+
+# Dear ImGui
+imgui.ini

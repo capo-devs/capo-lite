@@ -8,9 +8,9 @@ jobs:
       - name: init
         run: sudo apt update -yqq && sudo apt install -yqq ninja-build g++-11
       - name: configure gcc
-        run: cmake -S . --preset=default -B build -DCAPO_USE_OPENAL=OFF -DCMAKE_CXX_COMPILER=g++-11
+        run: cmake -S . --preset=default -B build -DCAPO_USE_OPENAL=OFF -DCAPO_BUILD_EXAMPLES=OFF -DCMAKE_CXX_COMPILER=g++-11
       - name: configure clang
-        run: cmake -S . --preset=ninja-clang -B clang -DCAPO_USE_OPENAL=OFF
+        run: cmake -S . --preset=ninja-clang -B clang -DCAPO_USE_OPENAL=OFF -DCAPO_BUILD_EXAMPLES=OFF
       - name: build gcc
         run: cmake --build build --config=Release
       - name: build clang
@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: configure
-        run: cmake -S . --preset=vs22 -B build -DCAPO_USE_OPENAL=OFF
+        run: cmake -S . --preset=vs22 -B build -DCAPO_USE_OPENAL=OFF -DCAPO_BUILD_EXAMPLES=OFF
       - name: build
         run: cmake --build build --config=Release
       - name: test
