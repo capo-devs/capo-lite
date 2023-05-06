@@ -1,10 +1,10 @@
 # Capo Lite
 
-### Minmalist C++20 audio library
+**Minmalist C++20 audio library**
 
 [![Build Status](https://github.com/capo-devs/capo-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/capo-devs/capo-lite/actions/workflows/ci.yml)
 
-#### Features
+## Features
 
 - Audio source 3D positioning
 - Audio clip playback (direct)
@@ -15,18 +15,26 @@
 - Lightweight and more optimized rendition of capo
 - Zero public dependencies (except standard library)
 
-#### Requirements
+### Showcase
+
+![image](https://user-images.githubusercontent.com/16272243/236586733-3844d6d5-8685-4333-b36b-d76d3ebb7b11.png)
+
+App: [player](examples/player) (capo-lite example)
+
+_Note: GUI powered by [gvdi](https://github.com/karnkaul/gvdi)_
+
+## Requirements
 
 - C++20 compiler (and standard library)
 - CMake 3.18+
 
-#### Supported Formats
+## Supported Formats
 
 - WAV
 - FLAC
 - MP3
 
-#### Usage
+## Usage
 
 ```cpp
 #include <capo/capo.hpp>
@@ -52,12 +60,12 @@ void capo_test() {
 
 [sound](examples/sound.cpp) and [music](examples/music.cpp) demonstrate basic sound and music usage, [player](examples/player) demonstrates a scrappy Dear ImGui based music player.
 
-#### Dependencies
+## Dependencies
 
 - [OpenAL Soft](https://github.com/kcat/openal-soft)
 - [dr_libs](https://github.com/mackron/dr_libs)
 
-#### Misc
+## Misc
 
 [Original repository](https://github.com/capo-devs/capo-lite)
 
