@@ -167,6 +167,8 @@ class Device : public detail::Device {
 	void set_gain(float value) final;
 	Vec3 velocity() const final;
 	void set_velocity(Vec3 const& value) final;
+	Vec3 position() const final;
+	void set_position(Vec3 const& value) final;
 	Orientation orientation() const final;
 	void set_orientation(Orientation const& value) final;
 

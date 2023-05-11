@@ -25,6 +25,8 @@ class Device {
 	void set_gain(float value);
 	Vec3 velocity() const;
 	void set_velocity(Vec3 const& value);
+	Vec3 position() const;
+	void set_position(Vec3 const& value);
 	Orientation orientation() const;
 	void set_orientation(Orientation const& value);
 

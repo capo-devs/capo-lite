@@ -433,6 +433,18 @@ void Device::set_velocity(Vec3 const& value) {
 	al_check([&] { alListener3f(AL_VELOCITY, value.x, value.y, value.z); });
 }
 
+Vec3 Device::position() const {
+	if (!m_context) { return {}; }
+	auto ret = Vec3{};
+	al_check([&] { alGetListener3f(AL_POSITION, &ret.x, &ret.y, &ret.z); });
+	return ret;
+}
+
+void Device::set_position(Vec3 const& value) {
+	if (!m_context) { return; }
+	al_check([&] { alListener3f(AL_POSITION, value.x, value.y, value.z); });
+}
+
 Orientation Device::orientation() const {
 	auto values = std::array<float, 6>{};
 	al_check([&] { alGetListenerfv(AL_ORIENTATION, values.data()); });

@@ -53,6 +53,8 @@ struct Device {
 	virtual void set_gain(float value) = 0;
 	virtual Vec3 velocity() const = 0;
 	virtual void set_velocity(Vec3 const& value) = 0;
+	virtual Vec3 position() const = 0;
+	virtual void set_position(Vec3 const& value) = 0;
 	virtual Orientation orientation() const = 0;
 	virtual void set_orientation(Orientation const& value) = 0;
 };

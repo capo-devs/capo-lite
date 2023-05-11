@@ -64,6 +64,8 @@ struct NullDevice : detail::Device {
 	void set_gain(float) final {}
 	Vec3 velocity() const final { return {}; }
 	void set_velocity(Vec3 const&) final {}
+	Vec3 position() const final { return {}; }
+	void set_position(Vec3 const&) final {}
 	Orientation orientation() const final { return {}; }
 	void set_orientation(Orientation const&) final {}
 };
@@ -108,6 +110,16 @@ Vec3 Device::velocity() const {
 void Device::set_velocity(Vec3 const& value) {
 	if (!m_impl) { return; }
 	return m_impl->set_velocity(value);
+}
+
+Vec3 Device::position() const {
+	if (!m_impl) { return {}; }
+	return m_impl->position();
+}
+
+void Device::set_position(Vec3 const& value) {
+	if (!m_impl) { return; }
+	m_impl->set_position(value);
 }
 
 Orientation Device::orientation() const {
