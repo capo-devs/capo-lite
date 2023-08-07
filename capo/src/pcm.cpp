@@ -57,7 +57,7 @@ struct Decoder {
 	Compression initialize(std::span<const std::byte> bytes, Compression compression) {
 		if (compression == Compression::eUnknown) {
 			for (auto ret = Compression(int(1)); ret < Compression::eCOUNT_; ret = Compression(int(ret) + 1)) {
-				if (try_initialize(bytes, compression) != Compression::eUnknown) { return compression; }
+				if (try_initialize(bytes, ret) != Compression::eUnknown) { return ret; }
 			}
 			return Compression::eUnknown;
 		}

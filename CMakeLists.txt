@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_DEBUG_POSTFIX "-d")
 
-project(capo-lite VERSION "1.0.1")
+project(capo-lite VERSION "1.0.2")
 
 set(is_root_project OFF)
 
