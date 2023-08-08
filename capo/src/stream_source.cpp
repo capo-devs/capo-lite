@@ -8,8 +8,10 @@ StreamSource::StreamSource(std::unique_ptr<detail::StreamSource> impl) : m_impl(
 
 void StreamSource::set_stream(Stream stream) {
 	if (!m_impl) { return; }
-	m_impl->set_stream(std::move(stream));
+	m_impl->set_stream(stream);
 }
+
+bool StreamSource::has_stream() const { return m_impl && m_impl->has_stream(); }
 
 State StreamSource::state() const {
 	if (!m_impl) { return {}; }

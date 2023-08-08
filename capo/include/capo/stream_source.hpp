@@ -26,6 +26,7 @@ class StreamSource {
 	/// outlive this Stream Source.
 	///
 	void set_stream(Stream stream);
+	bool has_stream() const;
 
 	State state() const;
 	void play();

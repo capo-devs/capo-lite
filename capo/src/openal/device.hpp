@@ -134,6 +134,7 @@ class StreamSource : public detail::StreamSource, public Streamable {
 	void seek(Duration point) final;
 
 	void set_stream(Stream stream) final;
+	bool has_stream() const final;
 
 	bool update() final;
 

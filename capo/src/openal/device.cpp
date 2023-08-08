@@ -332,6 +332,11 @@ void StreamSource::set_stream(Stream stream) {
 	m_samples = std::vector<Sample>(sample_count_for(frames_per_buffer_v, m_stream.clip().channels));
 }
 
+bool StreamSource::has_stream() const {
+	auto lock = std::scoped_lock{m_mutex};
+	return static_cast<bool>(m_stream);
+}
+
 bool StreamSource::update() {
 	auto lock = std::scoped_lock{m_mutex};
 	if (!m_stream || m_state != State::ePlaying) { return {}; }

@@ -54,6 +54,7 @@ struct NullStreamSource : detail::StreamSource {
 	void seek(Duration) {}
 
 	void set_stream(Stream) final {}
+	bool has_stream() const final { return false; }
 };
 
 struct NullDevice : detail::Device {
