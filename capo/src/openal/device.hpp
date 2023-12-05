@@ -64,6 +64,7 @@ class StreamUpdater {
 	StreamUpdater& operator=(StreamUpdater&&) = delete;
 
 	StreamUpdater();
+	~StreamUpdater();
 
 	void track(Streamable* source);
 	void untrack(Streamable* source);
@@ -73,7 +74,8 @@ class StreamUpdater {
 
 	std::unordered_set<Streamable*> m_sources{};
 	std::mutex m_mutex{};
-	std::jthread m_thread{};
+	std::thread m_thread{};
+	std::atomic<bool> m_stop{};
 };
 
 class SoundSource : public detail::SoundSource {

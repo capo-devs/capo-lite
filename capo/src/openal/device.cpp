@@ -59,7 +59,7 @@ T al_get_source(ALuint source, ALenum param) {
 }
 } // namespace
 
-void Buffer::Deleter::operator()(const ALuint id) const {
+void Buffer::Deleter::operator()(ALuint const id) const {
 	if (!id) { return; }
 	al_check([&] { alDeleteBuffers(1u, &id); });
 }
@@ -77,12 +77,19 @@ void Buffer::write(Clip clip) {
 }
 
 StreamUpdater::StreamUpdater() {
-	m_thread = std::jthread([this](std::stop_token const& stop) {
-		while (!stop.stop_requested()) {
-			poll();
-			std::this_thread::sleep_for(poll_rate_v);
-		}
-	});
+	m_thread = std::thread(
+		[this](std::atomic<bool> const& stop) {
+			while (!stop.load()) {
+				poll();
+				std::this_thread::sleep_for(poll_rate_v);
+			}
+		},
+		std::cref(m_stop));
+}
+
+StreamUpdater::~StreamUpdater() {
+	m_stop = true;
+	m_thread.join();
 }
 
 void StreamUpdater::track(Streamable* source) {
@@ -102,7 +109,7 @@ void StreamUpdater::poll() {
 	for (auto* source : m_sources) { source->update(); }
 }
 
-void Source::Deleter::operator()(const ALuint id) const {
+void Source::Deleter::operator()(ALuint const id) const {
 	if (!id) { return; }
 	al_check([&] { alDeleteSources(1u, &id); });
 }
