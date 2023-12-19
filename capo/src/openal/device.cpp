@@ -2,10 +2,6 @@
 #include <openal/device.hpp>
 #include <algorithm>
 #include <cassert>
-#include <ranges>
-
-// TODO: remove
-#include <iostream>
 
 namespace capo::openal {
 namespace {
@@ -364,7 +360,7 @@ bool StreamSource::update() {
 	std::rotate(m_queued.begin(), m_queued.begin() + 1, m_queued.end());
 	m_queued.pop_back();
 
-	auto const it = std::ranges::find_if(m_buffers, [unqueued](Buffer const& b) { return b.id.get() == unqueued; });
+	auto const it = std::find_if(m_buffers.begin(), m_buffers.end(), [unqueued](Buffer const& b) { return b.id.get() == unqueued; });
 	assert(it != m_buffers.end());
 	m_queued.push_back(m_stream.next_frame_index());
 	it->write(m_stream.read(m_samples));
