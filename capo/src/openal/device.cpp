@@ -2,10 +2,6 @@
 #include <openal/device.hpp>
 #include <algorithm>
 #include <cassert>
-#include <ranges>
-
-// TODO: remove
-#include <iostream>
 
 namespace capo::openal {
 namespace {
@@ -59,7 +55,7 @@ T al_get_source(ALuint source, ALenum param) {
 }
 } // namespace
 
-void Buffer::Deleter::operator()(const ALuint id) const {
+void Buffer::Deleter::operator()(ALuint const id) const {
 	if (!id) { return; }
 	al_check([&] { alDeleteBuffers(1u, &id); });
 }
@@ -77,12 +73,19 @@ void Buffer::write(Clip clip) {
 }
 
 StreamUpdater::StreamUpdater() {
-	m_thread = std::jthread([this](std::stop_token const& stop) {
-		while (!stop.stop_requested()) {
-			poll();
-			std::this_thread::sleep_for(poll_rate_v);
-		}
-	});
+	m_thread = std::thread(
+		[this](std::atomic<bool> const& stop) {
+			while (!stop.load()) {
+				poll();
+				std::this_thread::sleep_for(poll_rate_v);
+			}
+		},
+		std::cref(m_stop));
+}
+
+StreamUpdater::~StreamUpdater() {
+	m_stop = true;
+	m_thread.join();
 }
 
 void StreamUpdater::track(Streamable* source) {
@@ -102,7 +105,7 @@ void StreamUpdater::poll() {
 	for (auto* source : m_sources) { source->update(); }
 }
 
-void Source::Deleter::operator()(const ALuint id) const {
+void Source::Deleter::operator()(ALuint const id) const {
 	if (!id) { return; }
 	al_check([&] { alDeleteSources(1u, &id); });
 }
@@ -332,6 +335,11 @@ void StreamSource::set_stream(Stream stream) {
 	m_samples = std::vector<Sample>(sample_count_for(frames_per_buffer_v, m_stream.clip().channels));
 }
 
+bool StreamSource::has_stream() const {
+	auto lock = std::scoped_lock{m_mutex};
+	return static_cast<bool>(m_stream);
+}
+
 bool StreamSource::update() {
 	auto lock = std::scoped_lock{m_mutex};
 	if (!m_stream || m_state != State::ePlaying) { return {}; }
@@ -352,7 +360,7 @@ bool StreamSource::update() {
 	std::rotate(m_queued.begin(), m_queued.begin() + 1, m_queued.end());
 	m_queued.pop_back();
 
-	auto const it = std::ranges::find_if(m_buffers, [unqueued](Buffer const& b) { return b.id.get() == unqueued; });
+	auto const it = std::find_if(m_buffers.begin(), m_buffers.end(), [unqueued](Buffer const& b) { return b.id.get() == unqueued; });
 	assert(it != m_buffers.end());
 	m_queued.push_back(m_stream.next_frame_index());
 	it->write(m_stream.read(m_samples));

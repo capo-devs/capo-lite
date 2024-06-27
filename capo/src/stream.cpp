@@ -3,11 +3,11 @@
 
 namespace capo {
 Clip Stream::read(std::span<Sample> out) {
-	if (!m_clip) { return {}; }
+	if (!m_clip || m_next_sample >= m_clip.samples.size()) { return {}; }
 	auto const sample_count = std::min(out.size(), m_clip.samples.size() - m_next_sample);
 	for (std::size_t i = 0; i < sample_count; ++i) {
-		assert(m_next_sample <= m_clip.samples.size());
-		out[i] = m_clip.samples[++m_next_sample];
+		assert(m_next_sample < m_clip.samples.size());
+		out[i] = m_clip.samples[m_next_sample++];
 	}
 	return Clip{
 		.samples = out.subspan(0u, sample_count),

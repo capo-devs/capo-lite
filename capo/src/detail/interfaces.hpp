@@ -38,6 +38,7 @@ struct SoundSource : Source {
 
 struct StreamSource : Source {
 	virtual void set_stream(Stream stream) = 0;
+	virtual bool has_stream() const = 0;
 	virtual void rewind() { seek({}); }
 };
 
