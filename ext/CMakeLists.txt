@@ -4,6 +4,7 @@ find_package(Threads)
 
 file(ARCHIVE_EXTRACT INPUT "${CMAKE_CURRENT_SOURCE_DIR}/src.zip" DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}")
 
+message(STATUS "[dr-libs]")
 add_subdirectory(src/dr-libs)
 
 if(CAPO_USE_OPENAL)
@@ -21,6 +22,7 @@ if(CAPO_USE_OPENAL)
   set(ALSOFT_INSTALL_UTILS OFF)
   set(ALSOFT_UPDATE_BUILD_VERSION OFF)
   set(LIBTYPE STATIC)
+  message(STATUS "[openal-soft]")
   add_subdirectory(src/openal-soft)
   add_library(${PROJECT_NAME}::OpenAL ALIAS OpenAL)
 endif()
