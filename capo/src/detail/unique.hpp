@@ -2,6 +2,12 @@
 #include <concepts>
 #include <utility>
 
+#if defined(_MSC_VER)
+#define CAPO_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#else
+#define CAPO_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif
+
 namespace capo {
 ///
 /// \brief Default deleter for a Unique<Type>.
@@ -72,6 +78,6 @@ class Unique {
 
   private:
 	Type m_t{};
-	[[no_unique_address]] Deleter m_deleter{};
+	CAPO_NO_UNIQUE_ADDRESS Deleter m_deleter{};
 };
 } // namespace capo

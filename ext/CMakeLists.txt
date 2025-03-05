@@ -25,6 +25,12 @@ if(CAPO_USE_OPENAL)
   message(STATUS "[openal-soft]")
   add_subdirectory(src/openal-soft)
   add_library(${PROJECT_NAME}::OpenAL ALIAS OpenAL)
+
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(OpenAL PRIVATE -w)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(OpenAL PRIVATE /wd4244 /wd4267)
+  endif()
 endif()
 
 add_library(${PROJECT_NAME} INTERFACE)
