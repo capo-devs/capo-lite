@@ -4,6 +4,7 @@ find_package(Threads)
 
 file(ARCHIVE_EXTRACT INPUT "${CMAKE_CURRENT_SOURCE_DIR}/src.zip" DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}")
 
+message(STATUS "[dr-libs]")
 add_subdirectory(src/dr-libs)
 
 if(CAPO_USE_OPENAL)
@@ -21,8 +22,15 @@ if(CAPO_USE_OPENAL)
   set(ALSOFT_INSTALL_UTILS OFF)
   set(ALSOFT_UPDATE_BUILD_VERSION OFF)
   set(LIBTYPE STATIC)
+  message(STATUS "[openal-soft]")
   add_subdirectory(src/openal-soft)
   add_library(${PROJECT_NAME}::OpenAL ALIAS OpenAL)
+
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(OpenAL PRIVATE -w)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(OpenAL PRIVATE /wd4244 /wd4267)
+  endif()
 endif()
 
 add_library(${PROJECT_NAME} INTERFACE)
