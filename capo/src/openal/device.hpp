@@ -4,11 +4,9 @@
 #include <array>
 #include <atomic>
 #include <chrono>
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <thread>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
