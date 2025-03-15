@@ -14,6 +14,7 @@ if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
 endif()
 
 option(CAPO_USE_OPENAL "Build and link to OpenAL (for audio)" ON)
+option(CAPO_OPENAL_DLL "Build OpenAL as a shared/dynamic library" OFF)
 option(CAPO_BUILD_EXAMPLES "Build capo examples" ${is_root_project})
 
 add_subdirectory(ext)
