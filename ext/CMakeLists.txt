@@ -33,7 +33,7 @@ if(CAPO_USE_OPENAL)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(alsoft.fmt PUBLIC -w)
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(alsoft.fmt PUBLIC /wd4244 /wd4267)
+    target_compile_options(alsoft.fmt PUBLIC /wd4244 /wd4267 /wd4161)
   endif()
 endif()
 
