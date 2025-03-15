@@ -12,9 +12,9 @@ jobs:
       - name: configure clang
         run: cmake -S . --preset=ninja-clang -B clang -DCAPO_USE_OPENAL=OFF -DCAPO_BUILD_EXAMPLES=OFF
       - name: build gcc
-        run: cmake --build build --config=Release
+        run: cmake --build build --config=Release --parallel
       - name: build clang
-        run: cmake --build clang --config=Release
+        run: cmake --build clang --config=Release --parallel
       - name: test
         run: cd build && ctest -C Release
   build-windows:
@@ -24,6 +24,6 @@ jobs:
       - name: configure
         run: cmake -S . --preset=vs22 -B build -DCAPO_USE_OPENAL=OFF -DCAPO_BUILD_EXAMPLES=OFF
       - name: build
-        run: cmake --build build --config=Release
+        run: cmake --build build --config=Release --parallel
       - name: test
         run: cd build && ctest -C Release

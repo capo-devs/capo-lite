@@ -21,15 +21,19 @@ if(CAPO_USE_OPENAL)
   set(ALSOFT_INSTALL_EXAMPLES OFF)
   set(ALSOFT_INSTALL_UTILS OFF)
   set(ALSOFT_UPDATE_BUILD_VERSION OFF)
-  set(LIBTYPE STATIC)
+
+  if(NOT CAPO_OPENAL_DLL)
+    set(LIBTYPE STATIC)
+  endif()
+
   message(STATUS "[openal-soft]")
   add_subdirectory(src/openal-soft)
   add_library(${PROJECT_NAME}::OpenAL ALIAS OpenAL)
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(OpenAL PRIVATE -w)
+    target_compile_options(alsoft.fmt PUBLIC -w)
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(OpenAL PRIVATE /wd4244 /wd4267)
+    target_compile_options(alsoft.fmt PUBLIC /wd4244 /wd4267 /wd4161)
   endif()
 endif()
 
