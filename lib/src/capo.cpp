@@ -19,8 +19,6 @@
 #include <span>
 #include <vector>
 
-#include <print>
-
 using namespace std::chrono_literals;
 
 namespace fs = std::filesystem;
@@ -390,15 +388,6 @@ class Engine : public IEngine {
   private:
 	ma_engine m_engine{};
 };
-
-auto build_test_pcm(std::chrono::duration<float> const duration) {
-	auto ret = Pcm{.channels = 1};
-	auto get_duration = [&ret] {
-		return std::chrono::duration<float>{float(ret.samples.size()) / float(Pcm::sample_rate_v)};
-	};
-	for (auto rad = 0.0f; get_duration() < duration; rad += 0.05f) { ret.samples.push_back(0.1f * std::sin(rad)); }
-	return ret;
-}
 } // namespace
 } // namespace capo
 
@@ -428,9 +417,21 @@ auto capo::decode_file(char const* path, std::optional<Encoding> encoding) -> Pc
 	return decode_bytes(bytes, encoding);
 }
 
-auto capo::format_duration(std::chrono::duration<float> dt) -> std::string { return std::format("{:%T}", dt); }
+void capo::format_duration_to(std::string& out, std::chrono::duration<float> const dt) {
+	if (dt < 1h) {
+		std::format_to(std::back_inserter(out), "{:%M:%S}", dt);
+		return;
+	}
+	std::format_to(std::back_inserter(out), "{:%T}", dt);
+}
 
-auto capo::format_bytes(std::uint64_t const bytes) -> std::string {
+auto capo::format_duration(std::chrono::duration<float> const dt) -> std::string {
+	auto ret = std::string{};
+	format_duration_to(ret, dt);
+	return ret;
+}
+
+void capo::format_bytes_to(std::string& out, std::uint64_t const bytes) {
 	auto fbytes = float(bytes);
 	static constexpr auto suffixes_v = std::array{"B", "KiB", "MiB", "GiB"};
 	auto suffix = std::string_view{"TiB"};
@@ -441,34 +442,11 @@ auto capo::format_bytes(std::uint64_t const bytes) -> std::string {
 		}
 		fbytes /= 1024.0f;
 	}
-	return std::format("{:.1f}{}", fbytes, suffix);
+	std::format_to(std::back_inserter(out), "{:.1f}{}", fbytes, suffix);
 }
 
-#include <thread>
-
-auto capo::run_test(char const* path) -> int {
-	auto pcm = build_test_pcm(3s);
-	auto pcm2 = decode_file(path);
-	auto engine = create_engine();
-	if (!engine) { return EXIT_FAILURE; }
-	auto source = engine->create_source();
-	if (!source) { return EXIT_FAILURE; }
-	if (!source->bind_to(&pcm)) { return EXIT_FAILURE; }
-
-	auto blank_pcm = Pcm{};
-	source->bind_to(&pcm2);
-	[[maybe_unused]] auto const expect_fail = source->bind_to(&blank_pcm);
-	assert(!expect_fail);
-	source->set_fade_in(0.5s, 0.4f);
-	auto const duration = source->get_duration();
-	source->play();
-	// assert(source->can_wait_until_ended());
-	// source->wait_until_ended();
-	while (source->is_playing()) {
-		auto const cursor = source->get_cursor();
-		std::println("{:.1f} / {:.1f}", cursor.count(), duration.count());
-		std::this_thread::sleep_for(100ms);
-	}
-
-	return EXIT_SUCCESS;
+auto capo::format_bytes(std::uint64_t const bytes) -> std::string {
+	auto ret = std::string{};
+	format_bytes_to(ret, bytes);
+	return ret;
 }

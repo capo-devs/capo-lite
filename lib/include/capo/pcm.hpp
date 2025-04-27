@@ -16,6 +16,4 @@ struct Pcm {
 	std::vector<float> samples{};
 	std::uint8_t channels{};
 };
-
-auto run_test(char const* path) -> int;
 } // namespace capo
