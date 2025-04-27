@@ -3,6 +3,7 @@
 #include <capo/engine.hpp>
 #include <capo/format.hpp>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <bit>
 #include <cassert>
