@@ -12,6 +12,7 @@ class ISource : public Polymorphic {
 	auto bind_to(std::nullptr_t) = delete;
 	virtual auto bind_to(Pcm const* pcm) -> bool = 0;
 	virtual auto bind_to(std::shared_ptr<Pcm const> pcm) -> bool = 0;
+	virtual auto open_stream(char const* path) -> bool = 0;
 	virtual void unbind() = 0;
 
 	[[nodiscard]] virtual auto is_playing() const -> bool = 0;

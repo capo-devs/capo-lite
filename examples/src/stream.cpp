@@ -22,26 +22,19 @@ class App {
 	}
 
 	void load_and_play(char const* file_path) {
-		auto const start = std::chrono::steady_clock::now();
-		m_pcm = capo::decode_file(file_path);
-		if (!m_pcm.is_loaded()) { throw std::runtime_error{std::format("Failed to load audio file: '{}'", file_path)}; }
-		auto const dt = std::chrono::duration<float>{std::chrono::steady_clock::now() - start};
-		auto const bytes_str = capo::format_bytes(std::span{m_pcm.samples}.size_bytes());
-		std::println("decoded {} in {:.1f}s", bytes_str, dt.count());
-		create_source();
-		playback(std::format("'{}'", file_path));
+		m_source = m_engine->create_source();
+		if (!m_source) { throw std::runtime_error{"Failed to create Source"}; }
+		if (!m_source->open_stream(file_path)) {
+			throw std::runtime_error{std::format("Failed to open audio stream: {}", file_path)};
+		}
+
+		m_duration = m_source->get_duration();
+		playback(file_path);
 	}
 
   private:
-	void create_source() {
-		m_source = m_engine->create_source();
-		if (!m_source) { throw std::runtime_error{"Failed to create Source"}; }
-		if (!m_source->bind_to(&m_pcm)) { throw std::runtime_error{"Failed to bind Source to Pcm"}; }
-		m_duration = m_source->get_duration();
-	}
-
-	void playback(std::string_view const label) {
-		std::println("Playing {} ({}x{}Hz)...", label, m_pcm.channels, capo::Pcm::sample_rate_v);
+	void playback(std::string_view const path) {
+		std::println("Playing '{}' ({}x{}Hz)...", path, m_pcm.channels, capo::Pcm::sample_rate_v);
 		m_source->play();
 		while (m_source->is_playing()) {
 			print_progress();

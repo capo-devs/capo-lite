@@ -164,6 +164,11 @@ class Sound : public ma_sound {
 		}
 	}
 
+	explicit Sound(ma_engine& engine, char const* path) : ma_sound({}) {
+		auto const result = ma_sound_init_from_file(&engine, path, MA_SOUND_FLAG_STREAM, nullptr, nullptr, this);
+		if (result != MA_SUCCESS) { failed = true; }
+	}
+
 	~Sound() {
 		if (failed) { return; }
 		ma_sound_stop(this);
@@ -185,21 +190,18 @@ class Source : public ISource {
 
 	auto bind_to(Pcm const* target) -> bool final {
 		if (target == nullptr) { return false; }
-		if (m_sound && is_playing()) { stop(); }
-		auto sound = std::make_unique<Sound>(*m_engine, *target);
-		if (sound->failed) { return false; }
-
-		m_sound = std::move(sound);
-		set_cursor(0s);
-		static auto const callback = +[](void* self, ma_sound* /*sound*/) { static_cast<Source*>(self)->on_end(); };
-		ma_sound_set_end_callback(m_sound.get(), callback, this);
-		return true;
+		return try_create_sound(*target);
 	}
 
 	auto bind_to(std::shared_ptr<Pcm const> target) -> bool final {
 		if (!bind_to(target.get())) { return false; }
 		m_pcm = std::move(target);
 		return true;
+	}
+
+	auto open_stream(char const* path) -> bool final {
+		if (path == nullptr || *path == '\0') { return false; }
+		return try_create_sound(path);
 	}
 
 	void unbind() final { m_sound.reset(); }
@@ -328,6 +330,20 @@ class Source : public ISource {
 		auto const result = func(m_sound.get(), &ret);
 		if (result != MA_SUCCESS) { return 0s; }
 		return std::chrono::duration<float>{ret};
+	}
+
+	template <typename... Args>
+	auto try_create_sound(Args&&... args) -> bool {
+		if (m_sound && is_playing()) { stop(); }
+		auto sound = std::make_unique<Sound>(*m_engine, std::forward<Args>(args)...);
+		if (sound->failed) { return false; }
+
+		m_sound = std::move(sound);
+		m_pcm.reset();
+		set_cursor(0s);
+		static auto const callback = +[](void* self, ma_sound* /*sound*/) { static_cast<Source*>(self)->on_end(); };
+		ma_sound_set_end_callback(m_sound.get(), callback, this);
+		return true;
 	}
 
 	void on_end() {
