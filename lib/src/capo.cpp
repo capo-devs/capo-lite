@@ -1,5 +1,5 @@
 #include <miniaudio.h>
-#include <capo/decode.hpp>
+#include <capo/buffer.hpp>
 #include <capo/engine.hpp>
 #include <capo/format.hpp>
 #include <algorithm>
@@ -92,7 +92,7 @@ class Decoder : public ma_decoder {
 	auto operator=(Decoder&&) -> Decoder& = delete;
 
 	explicit Decoder(std::span<std::byte const> bytes, std::optional<Encoding> const encoding) : ma_decoder({}) {
-		auto config = ma_decoder_config_init(ma_format_f32, 0, Pcm::sample_rate_v);
+		auto config = ma_decoder_config_init(ma_format_f32, 0, Buffer::sample_rate_v);
 		config.encodingFormat = to_ma_encoding(encoding);
 		auto result = ma_decoder_init_memory(bytes.data(), bytes.size(), &config, this);
 		if (result != MA_SUCCESS) {
@@ -107,14 +107,12 @@ class Decoder : public ma_decoder {
 		}
 
 		m_channels = std::uint8_t(config.channels);
-		m_reserve = bytes.size();
 	}
 
 	~Decoder() { ma_decoder_uninit(this); }
 
-	[[nodiscard]] auto decode(Pcm& out) -> bool {
-		out = Pcm{.channels = m_channels};
-		out.samples.reserve(m_reserve);
+	[[nodiscard]] auto decode(std::vector<float>& samples, std::uint8_t& channels) -> bool {
+		channels = m_channels;
 		auto framebuffer = Framebuffer{};
 		while (true) {
 			auto buffer = framebuffer.acquire();
@@ -127,7 +125,7 @@ class Decoder : public ma_decoder {
 			framebuffer.release(std::move(buffer));
 			if (frames_read < frame_count) { break; }
 		}
-		out.samples = framebuffer.build();
+		samples = framebuffer.build();
 		return true;
 	}
 
@@ -137,20 +135,19 @@ class Decoder : public ma_decoder {
 
   private:
 	std::uint8_t m_channels{};
-	std::size_t m_reserve{};
 };
 
-class Buffer : public ma_audio_buffer {
+class AudioBuffer : public ma_audio_buffer {
   public:
-	Buffer(Buffer const&) = delete;
-	Buffer(Buffer&&) = delete;
-	auto operator=(Buffer const&) -> Buffer& = delete;
-	auto operator=(Buffer&&) -> Buffer& = delete;
+	AudioBuffer(AudioBuffer const&) = delete;
+	AudioBuffer(AudioBuffer&&) = delete;
+	auto operator=(AudioBuffer const&) -> AudioBuffer& = delete;
+	auto operator=(AudioBuffer&&) -> AudioBuffer& = delete;
 
-	explicit Buffer(Pcm const& pcm) : ma_audio_buffer({}) {
-		auto config = ma_audio_buffer_config_init(ma_format_f32, pcm.channels, pcm.get_frame_count(),
-												  pcm.samples.data(), nullptr);
-		config.sampleRate = Pcm::sample_rate_v;
+	explicit AudioBuffer(Buffer const& buffer) : ma_audio_buffer({}) {
+		auto config = ma_audio_buffer_config_init(ma_format_f32, buffer.get_channels(), buffer.get_frame_count(),
+												  buffer.get_samples().data(), nullptr);
+		config.sampleRate = Buffer::sample_rate_v;
 		auto result = ma_audio_buffer_init(&config, this);
 		if (result != MA_SUCCESS) {
 			failed = true;
@@ -158,7 +155,7 @@ class Buffer : public ma_audio_buffer {
 		}
 	}
 
-	~Buffer() {
+	~AudioBuffer() {
 		if (failed) { return; }
 		ma_audio_buffer_uninit(this);
 	}
@@ -173,8 +170,8 @@ class Sound : public ma_sound {
 	auto operator=(Sound const&) -> Sound& = delete;
 	auto operator=(Sound&&) -> Sound& = delete;
 
-	explicit Sound(ma_engine& engine, Pcm const& pcm) : ma_sound({}) {
-		m_buffer.emplace(pcm);
+	explicit Sound(ma_engine& engine, Buffer const& buffer) : ma_sound({}) {
+		m_buffer.emplace(buffer);
 		if (m_buffer->failed) {
 			failed = true;
 			return;
@@ -199,7 +196,7 @@ class Sound : public ma_sound {
 	bool failed{};
 
   private:
-	std::optional<Buffer> m_buffer{};
+	std::optional<AudioBuffer> m_buffer{};
 };
 
 class Source : public ISource {
@@ -208,14 +205,14 @@ class Source : public ISource {
 
 	[[nodiscard]] auto is_bound() const -> bool final { return m_sound != nullptr; }
 
-	auto bind_to(Pcm const* target) -> bool final {
+	auto bind_to(Buffer const* target) -> bool final {
 		if (target == nullptr) { return false; }
 		return try_create_sound(*target);
 	}
 
-	auto bind_to(std::shared_ptr<Pcm const> target) -> bool final {
+	auto bind_to(std::shared_ptr<Buffer const> target) -> bool final {
 		if (!bind_to(target.get())) { return false; }
-		m_pcm = std::move(target);
+		m_buffer = std::move(target);
 		return true;
 	}
 
@@ -359,7 +356,7 @@ class Source : public ISource {
 		if (sound->failed) { return false; }
 
 		m_sound = std::move(sound);
-		m_pcm.reset();
+		m_buffer.reset();
 		set_cursor(0s);
 		static auto const callback = +[](void* self, ma_sound* /*sound*/) { static_cast<Source*>(self)->on_end(); };
 		ma_sound_set_end_callback(m_sound.get(), callback, this);
@@ -372,7 +369,7 @@ class Source : public ISource {
 	}
 
 	ma_engine* m_engine{};
-	std::shared_ptr<Pcm const> m_pcm{};
+	std::shared_ptr<Buffer const> m_buffer{};
 	std::unique_ptr<Sound> m_sound{};
 	std::atomic_bool m_ended{};
 };
@@ -425,22 +422,18 @@ class Engine : public IEngine {
 	ma_engine m_engine{};
 };
 } // namespace
-} // namespace capo
 
-auto capo::create_engine() -> std::unique_ptr<IEngine> {
-	auto ret = std::make_unique<Engine>();
-	if (!ret->init()) { return {}; }
-	return ret;
+void Buffer::set_frames(std::vector<float> samples, std::uint8_t const channels) {
+	m_samples = std::move(samples);
+	m_channels = channels;
 }
 
-auto capo::decode_bytes(std::span<std::byte const> bytes, std::optional<Encoding> const encoding) -> Pcm {
-	auto ret = Pcm{};
+auto Buffer::decode_bytes(std::span<std::byte const> bytes, std::optional<Encoding> const encoding) -> bool {
 	auto decoder = Decoder{bytes, encoding};
-	if (decoder.failed || !decoder.decode(ret)) { return {}; }
-	return ret;
+	return !decoder.failed && decoder.decode(m_samples, m_channels);
 }
 
-auto capo::decode_file(char const* path, std::optional<Encoding> encoding) -> Pcm {
+auto Buffer::decode_file(char const* path, std::optional<Encoding> encoding) -> bool {
 	auto file = std::ifstream{path, std::ios::binary | std::ios::ate};
 	if (!file) { return {}; }
 	if (!encoding) { encoding = guess_encoding(fs::path{path}.extension().generic_string()); }
@@ -451,6 +444,13 @@ auto capo::decode_file(char const* path, std::optional<Encoding> encoding) -> Pc
 	void* data = bytes.data();
 	file.read(static_cast<char*>(data), size);
 	return decode_bytes(bytes, encoding);
+}
+} // namespace capo
+
+auto capo::create_engine() -> std::unique_ptr<IEngine> {
+	auto ret = std::make_unique<Engine>();
+	if (!ret->init()) { return {}; }
+	return ret;
 }
 
 void capo::format_duration_to(std::string& out, std::chrono::duration<float> const dt) {

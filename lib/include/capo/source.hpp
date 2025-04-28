@@ -1,5 +1,5 @@
 #pragma once
-#include <capo/pcm.hpp>
+#include <capo/buffer.hpp>
 #include <capo/polymorphic.hpp>
 #include <capo/vec3.hpp>
 #include <chrono>
@@ -10,8 +10,8 @@ class ISource : public Polymorphic {
   public:
 	[[nodiscard]] virtual auto is_bound() const -> bool = 0;
 	auto bind_to(std::nullptr_t) = delete;
-	virtual auto bind_to(Pcm const* pcm) -> bool = 0;
-	virtual auto bind_to(std::shared_ptr<Pcm const> pcm) -> bool = 0;
+	virtual auto bind_to(Buffer const* buffer) -> bool = 0;
+	virtual auto bind_to(std::shared_ptr<Buffer const> buffer) -> bool = 0;
 	virtual auto open_stream(char const* path) -> bool = 0;
 	virtual void unbind() = 0;
 

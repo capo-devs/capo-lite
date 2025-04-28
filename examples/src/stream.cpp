@@ -1,4 +1,3 @@
-#include <capo/decode.hpp>
 #include <capo/engine.hpp>
 #include <capo/format.hpp>
 #include <cassert>
@@ -29,12 +28,11 @@ class App {
 		}
 
 		m_duration = m_source->get_duration();
-		playback(file_path);
+		playback();
 	}
 
   private:
-	void playback(std::string_view const path) {
-		std::println("Playing '{}' ({}x{}Hz)...", path, m_pcm.channels, capo::Pcm::sample_rate_v);
+	void playback() {
 		m_source->play();
 		while (m_source->is_playing()) {
 			print_progress();
@@ -73,7 +71,6 @@ class App {
 
 	std::unique_ptr<capo::IEngine> m_engine{};
 
-	capo::Pcm m_pcm{};
 	std::unique_ptr<capo::ISource> m_source{};
 	std::chrono::duration<float> m_duration{};
 
