@@ -140,6 +140,32 @@ class Decoder : public ma_decoder {
 	std::size_t m_reserve{};
 };
 
+class Buffer : public ma_audio_buffer {
+  public:
+	Buffer(Buffer const&) = delete;
+	Buffer(Buffer&&) = delete;
+	auto operator=(Buffer const&) -> Buffer& = delete;
+	auto operator=(Buffer&&) -> Buffer& = delete;
+
+	explicit Buffer(Pcm const& pcm) : ma_audio_buffer({}) {
+		auto config = ma_audio_buffer_config_init(ma_format_f32, pcm.channels, pcm.get_frame_count(),
+												  pcm.samples.data(), nullptr);
+		config.sampleRate = Pcm::sample_rate_v;
+		auto result = ma_audio_buffer_init(&config, this);
+		if (result != MA_SUCCESS) {
+			failed = true;
+			return;
+		}
+	}
+
+	~Buffer() {
+		if (failed) { return; }
+		ma_audio_buffer_uninit(this);
+	}
+
+	bool failed{};
+};
+
 class Sound : public ma_sound {
   public:
 	Sound(Sound const&) = delete;
@@ -148,24 +174,19 @@ class Sound : public ma_sound {
 	auto operator=(Sound&&) -> Sound& = delete;
 
 	explicit Sound(ma_engine& engine, Pcm const& pcm) : ma_sound({}) {
-		auto config = ma_audio_buffer_config_init(ma_format_f32, pcm.channels, pcm.get_frame_count(),
-												  pcm.samples.data(), nullptr);
-		config.sampleRate = Pcm::sample_rate_v;
-		auto result = ma_audio_buffer_init(&config, &m_buffer);
-		if (result != MA_SUCCESS) {
+		m_buffer.emplace(pcm);
+		if (m_buffer->failed) {
 			failed = true;
 			return;
 		}
 
-		result = ma_sound_init_from_data_source(&engine, &m_buffer, 0, nullptr, this);
-		if (result != MA_SUCCESS) {
-			ma_audio_buffer_uninit(&m_buffer);
-			failed = true;
-		}
+		auto const result = ma_sound_init_from_data_source(&engine, &m_buffer, 0, nullptr, this);
+		if (result != MA_SUCCESS) { failed = true; }
 	}
 
 	explicit Sound(ma_engine& engine, char const* path) : ma_sound({}) {
-		auto const result = ma_sound_init_from_file(&engine, path, MA_SOUND_FLAG_STREAM, nullptr, nullptr, this);
+		static constexpr auto flags_v = MA_SOUND_FLAG_STREAM;
+		auto const result = ma_sound_init_from_file(&engine, path, flags_v, nullptr, nullptr, this);
 		if (result != MA_SUCCESS) { failed = true; }
 	}
 
@@ -173,13 +194,12 @@ class Sound : public ma_sound {
 		if (failed) { return; }
 		ma_sound_stop(this);
 		ma_sound_uninit(this);
-		ma_audio_buffer_uninit(&m_buffer);
 	}
 
 	bool failed{};
 
   private:
-	ma_audio_buffer m_buffer{};
+	std::optional<Buffer> m_buffer{};
 };
 
 class Source : public ISource {
