@@ -25,16 +25,19 @@ class ISource : public Polymorphic {
 
 	[[nodiscard]] virtual auto get_duration() const -> std::chrono::duration<float> = 0;
 	[[nodiscard]] virtual auto get_cursor() const -> std::chrono::duration<float> = 0;
-	virtual void set_cursor(std::chrono::duration<float> position) = 0;
+	virtual auto set_cursor(std::chrono::duration<float> position) -> bool = 0;
+
+	[[nodiscard]] virtual auto is_spatialized() const -> bool = 0;
+	virtual auto set_spatialized(bool spatialized) -> bool = 0;
+
+	virtual auto set_fade_in(std::chrono::duration<float> duration, float gain = -1.0f) -> bool = 0;
+	virtual auto set_fade_out(std::chrono::duration<float> duration) -> bool = 0;
 
 	[[nodiscard]] virtual auto is_looping() const -> bool = 0;
 	virtual void set_looping(bool looping) = 0;
 
 	[[nodiscard]] virtual auto get_gain() const -> float = 0;
 	virtual void set_gain(float gain) = 0;
-
-	[[nodiscard]] virtual auto is_spatialized() const -> bool = 0;
-	virtual void set_spatialized(bool spatialized) = 0;
 
 	[[nodiscard]] virtual auto get_position() const -> Vec3f = 0;
 	virtual void set_position(Vec3f const& pos) = 0;
@@ -44,8 +47,5 @@ class ISource : public Polymorphic {
 
 	[[nodiscard]] virtual auto get_pitch() const -> float = 0;
 	virtual void set_pitch(float pitch) = 0;
-
-	virtual void set_fade_in(std::chrono::duration<float> duration, float gain = -1.0f) = 0;
-	virtual void set_fade_out(std::chrono::duration<float> duration) = 0;
 };
 } // namespace capo

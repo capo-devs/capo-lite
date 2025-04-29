@@ -224,8 +224,7 @@ class Source : public ISource {
 	void unbind() final { m_sound.reset(); }
 
 	[[nodiscard]] auto is_playing() const -> bool final {
-		if (!is_bound()) { return false; }
-		return ma_sound_is_playing(m_sound.get()) == MA_TRUE;
+		return is_bound() && ma_sound_is_playing(m_sound.get()) == MA_TRUE;
 	}
 
 	void play() final {
@@ -261,17 +260,38 @@ class Source : public ISource {
 		return get_float(&ma_sound_get_cursor_in_seconds);
 	}
 
-	void set_cursor(std::chrono::duration<float> const position) final {
-		if (!is_bound()) { return; }
+	auto set_cursor(std::chrono::duration<float> const position) -> bool final {
+		if (!is_bound() || position < 0s || position > get_duration()) { return false; }
 		ma_sound_seek_to_second(m_sound.get(), position.count());
+		return true;
 	}
 
-	[[nodiscard]] auto is_looping() const -> bool final {
-		if (!is_bound()) { return false; }
-		return ma_sound_is_looping(m_sound.get()) == MA_TRUE;
+	[[nodiscard]] auto is_spatialized() const -> bool final {
+		return is_bound() && ma_sound_is_spatialization_enabled(m_sound.get()) == MA_TRUE;
 	}
+
+	auto set_spatialized(bool const spatialized) -> bool final {
+		if (!is_bound()) { return false; }
+		ma_sound_set_spatialization_enabled(m_sound.get(), spatialized ? MA_TRUE : MA_FALSE);
+		return true;
+	}
+
+	auto set_fade_in(std::chrono::duration<float> duration, float const gain) -> bool final {
+		if (!is_bound()) { return false; }
+		ma_sound_set_fade_in_milliseconds(m_sound.get(), 0.0f, gain, to_ms(duration));
+		return true;
+	}
+
+	auto set_fade_out(std::chrono::duration<float> duration) -> bool final {
+		if (!is_bound()) { return false; }
+		ma_sound_set_fade_in_milliseconds(m_sound.get(), -1.0f, 0.0f, to_ms(duration));
+		return true;
+	}
+
+	[[nodiscard]] auto is_looping() const -> bool final { return m_state.looping; }
 
 	void set_looping(bool const looping) final {
+		m_state.looping = looping;
 		if (!is_bound()) { return; }
 		ma_sound_set_looping(m_sound.get(), looping ? MA_TRUE : MA_FALSE);
 	}
@@ -282,61 +302,44 @@ class Source : public ISource {
 	}
 
 	void set_gain(float const gain) final {
+		m_state.gain = std::clamp(gain, 0.0f, 1.0f);
 		if (!is_bound()) { return; }
-		ma_sound_set_volume(m_sound.get(), std::clamp(gain, 0.0f, 1.0f));
+		ma_sound_set_volume(m_sound.get(), m_state.gain);
 	}
 
-	[[nodiscard]] auto is_spatialized() const -> bool final {
-		if (!is_bound()) { return false; }
-		return ma_sound_is_spatialization_enabled(m_sound.get()) == MA_TRUE;
-	}
-
-	void set_spatialized(bool const spatialized) final {
-		if (!is_bound()) { return; }
-		ma_sound_set_spatialization_enabled(m_sound.get(), spatialized ? MA_TRUE : MA_FALSE);
-	}
-
-	[[nodiscard]] auto get_position() const -> Vec3f final {
-		if (!is_bound()) { return {}; }
-		return std::bit_cast<Vec3f>(ma_sound_get_position(m_sound.get()));
-	}
+	[[nodiscard]] auto get_position() const -> Vec3f final { return m_state.position; }
 
 	void set_position(Vec3f const& pos) final {
+		m_state.position = pos;
 		if (!is_bound()) { return; }
 		ma_sound_set_position(m_sound.get(), pos.x, pos.y, pos.z);
 	}
 
-	[[nodiscard]] auto get_pan() const -> float final {
-		if (!is_bound()) { return {}; }
-		return ma_sound_get_pan(m_sound.get());
-	}
+	[[nodiscard]] auto get_pan() const -> float final { return m_state.pan; }
 
 	void set_pan(float const pan) final {
+		m_state.pan = pan;
 		if (!is_bound()) { return; }
 		ma_sound_set_pan(m_sound.get(), pan);
 	}
 
-	[[nodiscard]] auto get_pitch() const -> float final {
-		if (!is_bound()) { return -1.0f; }
-		return ma_sound_get_pitch(m_sound.get());
-	}
+	[[nodiscard]] auto get_pitch() const -> float final { return m_state.pitch; }
 
 	void set_pitch(float const pitch) final {
+		m_state.pitch = std::max(pitch, 0.0f);
 		if (!is_bound()) { return; }
-		ma_sound_set_pitch(m_sound.get(), std::max(pitch, 0.0f));
-	}
-
-	void set_fade_in(std::chrono::duration<float> duration, float const gain) final {
-		if (!is_bound()) { return; }
-		ma_sound_set_fade_in_milliseconds(m_sound.get(), 0.0f, gain, to_ms(duration));
-	}
-
-	void set_fade_out(std::chrono::duration<float> duration) final {
-		if (!is_bound()) { return; }
-		ma_sound_set_fade_in_milliseconds(m_sound.get(), -1.0f, 0.0f, to_ms(duration));
+		ma_sound_set_pitch(m_sound.get(), m_state.pitch);
 	}
 
   private:
+	struct State {
+		Vec3f position{};
+		float gain{1.0f};
+		float pan{0.0f};
+		float pitch{0.0f};
+		bool looping{};
+	};
+
 	[[nodiscard]] static constexpr auto to_ms(std::chrono::duration<float> const duration) -> std::uint64_t {
 		return std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
 	}
@@ -357,6 +360,7 @@ class Source : public ISource {
 
 		m_sound = std::move(sound);
 		m_buffer.reset();
+		copy_state_to_ma();
 		set_cursor(0s);
 		static auto const callback = +[](void* self, ma_sound* /*sound*/) { static_cast<Source*>(self)->on_end(); };
 		ma_sound_set_end_callback(m_sound.get(), callback, this);
@@ -368,9 +372,20 @@ class Source : public ISource {
 		m_ended.notify_one();
 	}
 
+	void copy_state_to_ma() const {
+		assert(is_bound());
+		ma_sound_set_volume(m_sound.get(), m_state.gain);
+		ma_sound_set_looping(m_sound.get(), m_state.looping ? MA_TRUE : MA_FALSE);
+		auto const& pos = m_state.position;
+		ma_sound_set_position(m_sound.get(), pos.x, pos.y, pos.z);
+		ma_sound_set_pan(m_sound.get(), m_state.pan);
+		ma_sound_set_pitch(m_sound.get(), m_state.pitch);
+	}
+
 	ma_engine* m_engine{};
 	std::shared_ptr<Buffer const> m_buffer{};
 	std::unique_ptr<Sound> m_sound{};
+	State m_state{};
 	std::atomic_bool m_ended{};
 };
 
