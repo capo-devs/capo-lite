@@ -35,7 +35,7 @@ constexpr auto to_ma_encoding(std::optional<Encoding> const encoding) -> ma_enco
 	}
 }
 
-constexpr auto guess_encoding(std::string_view const extension) -> std::optional<Encoding> {
+constexpr auto guess_encoding_from_extension(std::string_view const extension) -> std::optional<Encoding> {
 	if (extension == ".wav") { return Encoding::Wav; }
 	if (extension == ".mp3") { return Encoding::Mp3; }
 	if (extension == ".flac") { return Encoding::Flac; }
@@ -449,18 +449,28 @@ auto Buffer::decode_bytes(std::span<std::byte const> bytes, std::optional<Encodi
 }
 
 auto Buffer::decode_file(char const* path, std::optional<Encoding> encoding) -> bool {
-	auto file = std::ifstream{path, std::ios::binary | std::ios::ate};
-	if (!file) { return {}; }
-	if (!encoding) { encoding = guess_encoding(fs::path{path}.extension().generic_string()); }
-	auto const size = file.tellg();
-	file.seekg(std::ios::beg, {});
-	auto bytes = std::vector<std::byte>{};
-	bytes.resize(std::size_t(size));
-	void* data = bytes.data();
-	file.read(static_cast<char*>(data), size);
+	if (!encoding) { encoding = guess_encoding(path); }
+	auto const bytes = file_to_bytes(path);
+	if (bytes.empty()) { return false; }
 	return decode_bytes(bytes, encoding);
 }
 } // namespace capo
+
+auto capo::guess_encoding(char const* path) -> std::optional<Encoding> {
+	return guess_encoding_from_extension(fs::path{path}.extension().generic_string());
+}
+
+auto capo::file_to_bytes(char const* path) -> std::vector<std::byte> {
+	auto file = std::ifstream{path, std::ios::binary | std::ios::ate};
+	if (!file) { return {}; }
+	auto const size = file.tellg();
+	file.seekg(std::ios::beg, {});
+	auto ret = std::vector<std::byte>{};
+	ret.resize(std::size_t(size));
+	void* data = ret.data();
+	file.read(static_cast<char*>(data), size);
+	return ret;
+}
 
 auto capo::create_engine() -> std::unique_ptr<IEngine> {
 	auto ret = std::make_unique<Engine>();

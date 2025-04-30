@@ -29,4 +29,7 @@ class Buffer {
 	std::vector<float> m_samples{};
 	std::uint8_t m_channels{};
 };
+
+[[nodiscard]] auto guess_encoding(char const* path) -> std::optional<Encoding>;
+[[nodiscard]] auto file_to_bytes(char const* path) -> std::vector<std::byte>;
 } // namespace capo
