@@ -8,7 +8,6 @@
 #include <bit>
 #include <cassert>
 #include <chrono>
-#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
