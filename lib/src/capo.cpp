@@ -296,10 +296,7 @@ class Source : public ISource {
 		ma_sound_set_looping(m_sound.get(), looping ? MA_TRUE : MA_FALSE);
 	}
 
-	[[nodiscard]] auto get_gain() const -> float final {
-		if (!is_bound()) { return -1.0f; }
-		return ma_sound_get_volume(m_sound.get());
-	}
+	[[nodiscard]] auto get_gain() const -> float final { return m_state.gain; }
 
 	void set_gain(float const gain) final {
 		m_state.gain = std::clamp(gain, 0.0f, 1.0f);
