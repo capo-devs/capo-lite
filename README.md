@@ -13,11 +13,13 @@
 ## Requirements
 
 - C++23 compiler (and standard library)
-- CMake 3.24+
+- CMake 3.23+
 
 ## Showcase
 
-**[riff](https://github.com/capo-devs/riff) (Tiny music player)**
+**[riff](https://github.com/capo-devs/riff)** (Tiny music player)
+
+![Screenshot_20250505_222941](https://github.com/user-attachments/assets/3fb3536d-c0b7-4d21-92a6-5725c9fa4458)
 
 ## Supported encoding formats
 
