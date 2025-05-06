@@ -12,7 +12,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <list>
 #include <memory>
 #include <optional>
 #include <span>
@@ -41,48 +40,6 @@ constexpr auto guess_encoding_from_extension(std::string_view const extension) -
 	return {};
 }
 
-// exponentially growing deque: [=] -> [==] -> [====] ...
-// builds a vector of samples (floats) of unknown initial size.
-// setup by pushing a chain of chunks of exponentially increasing size.
-// this is slightly better than resizing AND copying all existing elements,
-// as would happen with vector + push_back.
-class Framebuffer {
-  public:
-	explicit Framebuffer(std::size_t const first_chunk_size = 1024 * 1024uz) : m_next_chunk_size(first_chunk_size) {}
-
-	[[nodiscard]] auto acquire() const -> std::vector<float> {
-		auto ret = std::vector<float>{};
-		ret.resize(m_next_chunk_size);
-		return ret;
-	}
-
-	void release(std::vector<float>&& chunk) {
-		m_next_chunk_size *= 2;
-		m_total_size += chunk.size();
-		m_chunks.push_back(std::move(chunk));
-	}
-
-	[[nodiscard]] auto build() const {
-		auto ret = std::vector<float>{};
-		if (m_chunks.empty()) { return ret; }
-
-		ret.resize(m_total_size);
-		auto dst = std::span{ret};
-		for (std::span<float const> const src : m_chunks) {
-			assert(dst.size() >= src.size());
-			std::memcpy(dst.data(), src.data(), src.size_bytes());
-			dst = dst.subspan(src.size());
-		}
-
-		return ret;
-	}
-
-  private:
-	std::list<std::vector<float>> m_chunks{};
-	std::size_t m_next_chunk_size{};
-	std::size_t m_total_size{};
-};
-
 class Decoder : public ma_decoder {
   public:
 	Decoder(Decoder const&) = delete;
@@ -106,25 +63,30 @@ class Decoder : public ma_decoder {
 		}
 
 		m_channels = std::uint8_t(config.channels);
+		m_input_size = bytes.size();
 	}
 
 	~Decoder() { ma_decoder_uninit(this); }
 
 	[[nodiscard]] auto decode(std::vector<float>& samples, std::uint8_t& channels) -> bool {
+		auto frames = ma_uint64{};
+		ma_decoder_get_length_in_pcm_frames(this, &frames);
+
 		channels = m_channels;
-		auto framebuffer = Framebuffer{};
+		samples.clear();
+		samples.reserve(get_reserve_size());
+		static constexpr auto buffer_size_v = 128uz /*KiB*/ * 1024uz /*B*/ / sizeof(float);
+		auto buffer = std::vector<float>(buffer_size_v);
 		while (true) {
-			auto buffer = framebuffer.acquire();
-			assert(!buffer.empty());
-			auto const frame_count = buffer.size() / m_channels;
+			auto const frames_to_read = buffer.size() / m_channels;
 			auto frames_read = ma_uint64{};
-			auto const result = ma_decoder_read_pcm_frames(this, buffer.data(), frame_count, &frames_read);
+			auto const result = ma_decoder_read_pcm_frames(this, buffer.data(), frames_to_read, &frames_read);
 			if (result != MA_SUCCESS || frames_read == 0) { return false; }
-			buffer.resize(frames_read * m_channels);
-			framebuffer.release(std::move(buffer));
-			if (frames_read < frame_count) { break; }
+
+			auto const frames = std::span{buffer.data(), frames_read * m_channels};
+			for (auto const sample : frames) { samples.push_back(sample); }
+			if (frames_read < frames_to_read) { break; }
 		}
-		samples = framebuffer.build();
 		return true;
 	}
 
@@ -133,7 +95,25 @@ class Decoder : public ma_decoder {
 	bool failed{};
 
   private:
+	[[nodiscard]] auto get_reserve_size() -> std::size_t {
+		auto frames = ma_uint64{};
+		// if the decoder returns the frame count, return exact value.
+		if (ma_decoder_get_length_in_pcm_frames(this, &frames) == MA_SUCCESS && frames > 0) {
+			// MP3s and FLACs decode one extra frame (?)...
+			return std::size_t((frames + 1) * m_channels);
+		}
+
+		// WAV input will be larger than "decoded" PCM, assume 80% shrinkage.
+		static constexpr auto input_coefficient_v = 0.8f;
+		auto const input_based = std::size_t(input_coefficient_v * float(m_input_size));
+
+		// Rely on malloc allocating pages after this point.
+		static constexpr auto max_reserve_v = 128uz /*KiB*/ * 1024uz /*B*/;
+		return std::min(input_based, max_reserve_v);
+	}
+
 	std::uint8_t m_channels{};
+	std::size_t m_input_size{};
 };
 
 class AudioBuffer : public ma_audio_buffer {
