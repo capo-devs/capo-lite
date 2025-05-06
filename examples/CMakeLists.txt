@@ -1,17 +1,19 @@
 project(capo-examples)
 
-add_executable(${PROJECT_NAME}-sound)
-target_link_libraries(${PROJECT_NAME}-sound PRIVATE
-  capo::lite
-  capo::compile-options
-)
-target_sources(${PROJECT_NAME}-sound PRIVATE sound.cpp)
+message(STATUS "[${PROJECT_NAME}]")
 
-add_executable(${PROJECT_NAME}-music)
-target_link_libraries(${PROJECT_NAME}-music PRIVATE
-  capo::lite
-  capo::compile-options
-)
-target_sources(${PROJECT_NAME}-music PRIVATE music.cpp)
+function(add_example ID)
+  add_executable(capo-${ID})
 
-add_subdirectory(player)
+  target_link_libraries(capo-${ID} PRIVATE
+    capo::capo
+    capo::warnings
+  )
+
+  target_sources(capo-${ID} PRIVATE
+    src/${ID}.cpp
+  )
+endfunction()
+
+add_example(basic)
+add_example(decode)
