@@ -15,6 +15,10 @@
 - C++23 compiler (and standard library)
 - CMake 3.24+
 
+## Showcase
+
+**[riff](https://github.com/capo-devs/riff) (Tiny music player)**
+
 ## Supported encoding formats
 
 - WAV
@@ -29,4 +33,4 @@
 
 [Original repository](https://github.com/capo-devs/capo-lite)
 
-[LICENCE](LICENSE)
+[LICENSE](LICENSE)

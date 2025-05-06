@@ -1,6 +1,7 @@
 #pragma once
 
 namespace capo {
+/// \brief Base class for polymorphic types.
 class Polymorphic {
   public:
 	Polymorphic() = default;

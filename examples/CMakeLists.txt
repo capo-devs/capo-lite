@@ -16,4 +16,4 @@ function(add_example ID)
 endfunction()
 
 add_example(basic)
-add_example(stream)
+add_example(decode)
