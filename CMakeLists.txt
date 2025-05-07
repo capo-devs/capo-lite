@@ -35,6 +35,10 @@ if(capo_is_top_level)
   endif()
 endif()
 
+if(capo_is_top_level)
+  configure_file(Doxyfile.in "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile" @ONLY)
+endif()
+
 add_subdirectory(lib)
 
 if(CAPO_BUILD_EXAMPLES)
