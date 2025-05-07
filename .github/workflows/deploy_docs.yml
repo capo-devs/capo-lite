@@ -1,8 +1,8 @@
 name: deploy-docs
 on:
   push:
-    branches:
-      - docs
+    tags:
+      - 'v*'
 jobs:
   deploy:
     runs-on: ubuntu-latest
