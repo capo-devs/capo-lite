@@ -10,6 +10,10 @@
 - Streaming playback
 - RAII types
 
+## Documentation
+
+Doxygen generated documentation is hosted [here](https://capo-devs.github.io/capo-lite/index.html).
+
 ## Requirements
 
 - C++23 compiler (and standard library)
