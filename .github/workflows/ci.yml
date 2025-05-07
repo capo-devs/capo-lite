@@ -25,7 +25,7 @@ jobs:
       - name: init
         run: sudo apt update -yqq && sudo apt install doxygen
       - name: build
-        run: doxygen Doxyfile
+        run: cmake -P scripts/build_docs.cmake
   x64-linux-gcc:
     runs-on: ubuntu-latest
     steps:

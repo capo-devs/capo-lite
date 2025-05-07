@@ -18,3 +18,5 @@ compile_commands.json
 # Dear ImGui
 imgui.ini
 
+# Doxygen
+Doxyfile

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(capo-lite VERSION "2.0.0")
+include(version.cmake)
+
+project(capo-lite VERSION ${capo_version})
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

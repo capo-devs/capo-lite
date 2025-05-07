@@ -17,9 +17,7 @@ jobs:
       - name: init
         run: sudo apt update -yqq && sudo apt install doxygen
       - name: build docs
-        run: |
-          doxygen Doxyfile
-          ls docs
+        run: cmake -P scripts/build_docs.cmake
       - name: setup pages
         uses: actions/configure-pages@v4
       - name: upload artifact
