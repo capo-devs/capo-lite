@@ -1,8 +1,5 @@
-name: ci-push
-on:
-  push:
-      branches-ignore:
-      - docs
+name: ci-pr
+on: [pull_request]
 jobs:
   format-check:
     runs-on: ubuntu-latest
