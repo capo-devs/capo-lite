@@ -1,5 +1,5 @@
-name: ci-push
-on: [push]
+name: ci-pr
+on: [pull_request]
 jobs:
   format-check:
     runs-on: ubuntu-latest
@@ -15,6 +15,14 @@ jobs:
         run: scripts/format_code.sh
       - name: check diff
         run: .github/format_check_diff.sh
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: sudo apt update -yqq && sudo apt install doxygen
+      - name: build
+        run: cmake -P scripts/build_docs.cmake
   x64-linux-gcc:
     runs-on: ubuntu-latest
     steps:
