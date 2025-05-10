@@ -12,7 +12,3 @@ set(MINIAUDIO_DEBUG_OUTPUT ${CAPO_MA_DEBUG_OUTPUT})
 
 add_subdirectory(src/miniaudio)
 add_library(miniaudio::miniaudio ALIAS miniaudio)
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL GNU OR CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-  target_compile_options(miniaudio PRIVATE -w)
-endif()

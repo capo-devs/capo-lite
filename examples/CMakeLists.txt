@@ -7,7 +7,6 @@ function(add_example ID)
 
   target_link_libraries(capo-${ID} PRIVATE
     capo::capo
-    capo::warnings
   )
 
   target_sources(capo-${ID} PRIVATE
