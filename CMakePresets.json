@@ -51,8 +51,8 @@
       "binaryDir": "${sourceDir}/out/gcc",
       "cacheVariables": {
         "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wconversion -Werror=return-type",
-        "CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT": "-Wall -Wextra -Wpedantic -Wconversion -Werror",
-        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-Wall -Wextra -Wpedantic -Wconversion -Werror"
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT": "-Werror",
+        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-Werror"
       }
     },
     {
@@ -63,8 +63,8 @@
       "binaryDir": "${sourceDir}/out/clang",
       "cacheVariables": {
         "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wconversion -Werror=return-type",
-        "CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT": "-Wall -Wextra -Wpedantic -Wconversion -Werror",
-        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-Wall -Wextra -Wpedantic -Wconversion -Werror"
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT": "-Werror",
+        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-Werror"
       }
     },
     {

@@ -1,5 +1,5 @@
 name: ci-pr
-on: [pull_request]
+on: [pull_request, workflow_dispatch]
 jobs:
   format-check:
     runs-on: ubuntu-latest
