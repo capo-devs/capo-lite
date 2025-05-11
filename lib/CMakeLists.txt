@@ -9,7 +9,6 @@ add_library(capo::capo ALIAS ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   miniaudio::miniaudio
-  capo::warnings
 )
 
 file(GLOB_RECURSE headers LIST_DIRECTORIES false "include/capo/*.hpp")

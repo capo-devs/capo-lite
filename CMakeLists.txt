@@ -16,27 +16,6 @@ option(CAPO_MA_DEBUG_OUTPUT "Enable miniaudio debug output" ${capo_is_top_level}
 
 add_subdirectory(ext)
 
-add_library(capo-warnings INTERFACE)
-add_library(capo::warnings ALIAS capo-warnings)
-
-if(capo_is_top_level)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-    target_compile_options(capo-warnings INTERFACE
-      -Wall -Wextra -Wpedantic -Wconversion -Werror=return-type
-    )
-  endif()
-
-  if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-    target_compile_options(capo-warnings INTERFACE
-      $<$<NOT:$<CONFIG:Debug>>:-Werror>
-    )
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)
-    target_compile_options(capo-warnings
-      $<$<NOT:$<CONFIG:Debug>>:/WX>
-    )
-  endif()
-endif()
-
 if(capo_is_top_level)
   configure_file(Doxyfile.in "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile" @ONLY)
 endif()

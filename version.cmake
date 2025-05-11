@@ -1,1 +1,1 @@
-set(capo_version "2.0.0")
+set(capo_version "2.0.1")
