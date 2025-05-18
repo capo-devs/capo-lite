@@ -10,9 +10,9 @@
 - Streaming playback
 - RAII types
 
-## Documentation
+## Reference
 
-Doxygen generated documentation is hosted [here](https://capo-devs.github.io/capo-lite/index.html).
+Doxygen generated API reference is hosted [here](https://capo-devs.github.io/capo-lite/index.html).
 
 ## Requirements
 
