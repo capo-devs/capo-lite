@@ -156,7 +156,7 @@ class Sound : public ma_sound {
 			return;
 		}
 
-		auto const result = ma_sound_init_from_data_source(&engine, &m_buffer, 0, nullptr, this);
+		auto const result = ma_sound_init_from_data_source(&engine, &m_buffer.value(), 0, nullptr, this);
 		if (result != MA_SUCCESS) { failed = true; }
 	}
 
