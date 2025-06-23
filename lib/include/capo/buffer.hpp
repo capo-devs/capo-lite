@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace capo {
@@ -45,7 +46,7 @@ class Buffer {
 };
 
 /// \brief Guess the Encoding format based on the file extension.
-[[nodiscard]] auto guess_encoding(char const* path) -> std::optional<Encoding>;
+[[nodiscard]] auto guess_encoding(std::string_view path) -> std::optional<Encoding>;
 
 /// \brief Load file data as a binary byte array.
 [[nodiscard]] auto file_to_bytes(char const* path) -> std::vector<std::byte>;

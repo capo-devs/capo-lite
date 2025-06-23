@@ -432,7 +432,7 @@ auto Buffer::decode_file(char const* path, std::optional<Encoding> encoding) -> 
 }
 } // namespace capo
 
-auto capo::guess_encoding(char const* path) -> std::optional<Encoding> {
+auto capo::guess_encoding(std::string_view const path) -> std::optional<Encoding> {
 	return guess_encoding_from_extension(fs::path{path}.extension().generic_string());
 }
 
