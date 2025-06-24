@@ -24,6 +24,7 @@ class App {
 		if (!m_source) { throw std::runtime_error{"Failed to create Source"}; }
 
 		if (preload) {
+			std::println("preloading...");
 			// decode and preload PCM data into an Audio Buffer.
 			load_buffer(file_path);
 		} else {
