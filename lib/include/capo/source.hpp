@@ -1,6 +1,7 @@
 #pragma once
 #include <capo/buffer.hpp>
 #include <capo/polymorphic.hpp>
+#include <capo/stream.hpp>
 #include <capo/vec3.hpp>
 #include <chrono>
 #include <memory>
@@ -24,11 +25,21 @@ class ISource : public Polymorphic {
 	/// \param buffer Audio Buffer to bind source to.
 	/// \returns true on success.
 	virtual auto bind_to(std::shared_ptr<Buffer const> buffer) -> bool = 0;
+	/// \brief Bind to custom stream (data source).
+	/// Passed stream must outlive this instance.
+	/// \param custom_stream Stream to bind to.
+	/// \returns true on success.
+	virtual auto bind_to(IStream* custom_stream) -> bool = 0;
+	/// \brief Bind to custom stream (data source).
+	/// \param custom_stream Stream to bind to.
+	/// \returns true on success.
+	virtual auto bind_to(std::shared_ptr<IStream> custom_stream) -> bool = 0;
 	/// \brief Open file stream and bind to it.
+	/// The same encodings are supported as with capo::Buffer.
 	/// \param path Path to audio file.
 	/// \returns true on success.
-	virtual auto open_stream(char const* path) -> bool = 0;
-	/// \brief Detach buffer or file stream if bound.
+	virtual auto open_file_stream(char const* path) -> bool = 0;
+	/// \brief Detach buffer or stream if bound.
 	virtual void unbind() = 0;
 
 	[[nodiscard]] virtual auto is_playing() const -> bool = 0;
