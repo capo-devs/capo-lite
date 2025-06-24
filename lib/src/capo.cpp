@@ -2,7 +2,7 @@
 #include <capo/buffer.hpp>
 #include <capo/engine.hpp>
 #include <capo/format.hpp>
-#include <capo/stream.hpp>
+#include <capo/stream_pipe.hpp>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -570,6 +570,40 @@ auto Buffer::decode_file(char const* path, std::optional<Encoding> encoding) -> 
 	auto const bytes = file_to_bytes(path);
 	if (bytes.empty()) { return false; }
 	return decode_bytes(bytes, encoding);
+}
+
+auto IStreamPipe::read_samples(std::span<float> out) -> std::size_t {
+	auto ret = drain_buffer(out);
+	assert(ret <= out.size());
+	if (ret == out.size()) { return ret; }
+	out = out.subspan(ret);
+
+	while (m_buffer.size() < out.size()) {
+		auto const prev_size = m_buffer.size();
+		push_samples(m_buffer);
+		auto const at_end = m_buffer.size() == prev_size;
+		if (at_end) { break; }
+	}
+
+	ret += drain_buffer(out);
+	return ret;
+}
+
+auto IStreamPipe::drain_buffer(std::span<float> out) -> std::size_t {
+	if (m_buffer.empty()) { return 0; }
+	auto const size = std::min(out.size(), m_buffer.size());
+	auto const src = std::span{m_buffer}.subspan(0, size);
+	auto const remain = std::span{m_buffer}.subspan(size);
+	std::ranges::copy(src, out.begin());
+	if (remain.empty()) {
+		m_buffer.clear();
+	} else {
+		m_staging.clear();
+		std::ranges::copy(remain, std::back_inserter(m_staging));
+		m_buffer.clear();
+		std::ranges::copy(m_staging, std::back_inserter(m_buffer));
+	}
+	return size;
 }
 } // namespace capo
 
