@@ -72,10 +72,9 @@ void run(fs::path const& path) {
 		throw std::runtime_error{"Failed to decode file: " + path.generic_string()};
 	}
 
+	auto stream = Stream{std::move(buffer)};
 	// bind Stream to Source. fatal error if not bound.
-	if (!source->bind_to(std::make_shared<Stream>(std::move(buffer)))) {
-		throw std::runtime_error{"Failed to bind Source to Stream"};
-	}
+	if (!source->bind_to(&stream)) { throw std::runtime_error{"Failed to bind Source to Stream"}; }
 
 	// start playback.
 	source->play();
