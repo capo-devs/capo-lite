@@ -26,5 +26,9 @@ class IStream : public Polymorphic {
 	[[nodiscard]] virtual auto get_cursor() const -> std::optional<std::size_t> { return {}; }
 	/// \returns 0 if not supported.
 	[[nodiscard]] virtual auto get_sample_count() const -> std::size_t { return 0; }
+	/// \brief Handle custom looping behavior, if applicable.
+	/// Just return true / don't override for the bound Audio Source to use its own looping mechanism.
+	/// \returns false if looping is not possible.
+	[[nodiscard]] virtual auto set_looping([[maybe_unused]] bool looping) -> bool { return true; }
 };
 } // namespace capo

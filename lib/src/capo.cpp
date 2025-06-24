@@ -224,6 +224,10 @@ class StreamSource : public ma_data_source_base {
 		return MA_SUCCESS;
 	}
 
+	auto set_looping(ma_bool32 const loop) {
+		return m_stream.set_looping(loop == MA_TRUE) ? MA_SUCCESS : MA_NOT_IMPLEMENTED;
+	}
+
 	static ma_data_source_vtable const s_vtable;
 
 	IStream& m_stream;
@@ -247,7 +251,9 @@ ma_data_source_vtable const StreamSource::s_vtable = {
 	.onGetLength = [](ma_data_source* base, ma_uint64* out_length) -> ma_result {
 		return static_cast<StreamSource*>(base)->get_frame_count(*out_length);
 	},
-	.onSetLooping = nullptr,
+	.onSetLooping = [](ma_data_source* base, ma_bool32 loop) -> ma_result {
+		return static_cast<StreamSource*>(base)->set_looping(loop);
+	},
 	.flags = {},
 };
 
