@@ -323,7 +323,7 @@ class Source : public ISource {
 	}
 
 	auto bind_to(IStream* target) -> bool final {
-		if (target == nullptr || target->get_channels() == 0 || target->get_sample_count() == 0) { return false; }
+		if (target == nullptr || target->get_channels() == 0 || target->get_sample_rate() == 0) { return false; }
 		return try_create_sound(*target);
 	}
 
