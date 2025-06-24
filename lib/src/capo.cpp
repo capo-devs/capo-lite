@@ -17,6 +17,7 @@
 #include <optional>
 #include <ranges>
 #include <span>
+#include <variant>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -246,6 +247,8 @@ ma_data_source_vtable const StreamSource::s_vtable = {
 	.onGetLength = [](ma_data_source* base, ma_uint64* out_length) -> ma_result {
 		return static_cast<StreamSource*>(base)->get_frame_count(*out_length);
 	},
+	.onSetLooping = nullptr,
+	.flags = {},
 };
 
 class Sound : public ma_sound {
