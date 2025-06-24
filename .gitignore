@@ -20,4 +20,4 @@ imgui.ini
 
 # Doxygen
 Doxyfile
-docs/
+/docs

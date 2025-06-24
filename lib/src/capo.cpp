@@ -2,6 +2,7 @@
 #include <capo/buffer.hpp>
 #include <capo/engine.hpp>
 #include <capo/format.hpp>
+#include <capo/stream_pipe.hpp>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -14,7 +15,9 @@
 #include <fstream>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
+#include <variant>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -142,6 +145,118 @@ class AudioBuffer : public ma_audio_buffer {
 	bool failed{};
 };
 
+class StreamSource : public ma_data_source_base {
+  public:
+	StreamSource(StreamSource const&) = delete;
+	StreamSource(StreamSource&&) = delete;
+	auto operator=(StreamSource const&) = delete;
+	auto operator=(StreamSource&&) = delete;
+
+	explicit StreamSource(IStream& stream)
+		: ma_data_source_base({}), m_stream(stream), m_channels(stream.get_channels()) {
+		auto config = ma_data_source_config_init();
+		config.vtable = &s_vtable;
+		auto const result = ma_data_source_init(&config, this);
+		if (result != MA_SUCCESS) {
+			failed = true;
+			return;
+		}
+	}
+
+	~StreamSource() {
+		if (failed) { return; }
+		ma_data_source_uninit(this);
+	}
+
+	bool failed{};
+
+  private:
+	auto on_read(void* out, ma_uint64 count, ma_uint64& frames_read) {
+		auto const span = std::span{static_cast<float*>(out), std::size_t(count) * m_channels};
+		frames_read = ma_uint64(m_stream.read_samples(span) / m_channels);
+		if (frames_read == 0) { return MA_AT_END; }
+		return MA_SUCCESS;
+	}
+
+	auto on_seek(ma_uint64 const frame) {
+		return m_stream.seek_to_sample(frame * m_channels) ? MA_SUCCESS : MA_NOT_IMPLEMENTED;
+	}
+
+	auto get_data_format(ma_format& fmt, ma_uint32& channels, ma_uint32& sample_rate, ma_channel* ch_map,
+						 std::size_t const max_ch) {
+		auto const in_channels = m_stream.get_channels();
+		auto const in_sample_rate = m_stream.get_sample_rate();
+		if (in_channels == 0 || in_sample_rate == 0) { return MA_NOT_IMPLEMENTED; }
+
+		fmt = ma_format_f32;
+		channels = ma_uint32(in_channels);
+		sample_rate = ma_uint32(in_sample_rate);
+		auto const span = std::span{ch_map, max_ch};
+		static constexpr auto channels_stereo_v = std::array{MA_CHANNEL_LEFT, MA_CHANNEL_RIGHT};
+		if (!span.empty()) {
+			if (channels == 1) {
+				span[0] = MA_CHANNEL_MONO;
+			} else {
+				for (auto const [in, out] : std::views::zip(channels_stereo_v, span)) { out = in; }
+			}
+		}
+
+		return MA_SUCCESS;
+	}
+
+	auto get_cursor(ma_uint64& out) const {
+		auto const ret = m_stream.get_cursor();
+		if (!ret) {
+			out = 0;
+			return MA_NOT_IMPLEMENTED;
+		}
+		out = ma_uint64(*ret);
+		return MA_SUCCESS;
+	}
+
+	auto get_frame_count(ma_uint64& out) const {
+		auto const ret = m_stream.get_sample_count();
+		if (ret == 0) {
+			out = 0;
+			return MA_NOT_IMPLEMENTED;
+		}
+		out = ma_uint64(ret * m_channels);
+		return MA_SUCCESS;
+	}
+
+	auto set_looping(ma_bool32 const loop) {
+		return m_stream.set_looping(loop == MA_TRUE) ? MA_SUCCESS : MA_NOT_IMPLEMENTED;
+	}
+
+	static ma_data_source_vtable const s_vtable;
+
+	IStream& m_stream;
+	std::uint8_t m_channels{};
+};
+
+ma_data_source_vtable const StreamSource::s_vtable = {
+	.onRead = [](ma_data_source* base, void* out, ma_uint64 count, ma_uint64* frames_read) -> ma_result {
+		return static_cast<StreamSource*>(base)->on_read(out, count, *frames_read);
+	},
+	.onSeek = [](ma_data_source* base, ma_uint64 frame) -> ma_result {
+		return static_cast<StreamSource*>(base)->on_seek(frame);
+	},
+	.onGetDataFormat = [](ma_data_source* base, ma_format* fmt, ma_uint32* channels, ma_uint32* sample_rate,
+						  ma_channel* ch_map, std::size_t max_ch) -> ma_result {
+		return static_cast<StreamSource*>(base)->get_data_format(*fmt, *channels, *sample_rate, ch_map, max_ch);
+	},
+	.onGetCursor = [](ma_data_source* base, ma_uint64* cursor) -> ma_result {
+		return static_cast<StreamSource*>(base)->get_cursor(*cursor);
+	},
+	.onGetLength = [](ma_data_source* base, ma_uint64* out_length) -> ma_result {
+		return static_cast<StreamSource*>(base)->get_frame_count(*out_length);
+	},
+	.onSetLooping = [](ma_data_source* base, ma_bool32 loop) -> ma_result {
+		return static_cast<StreamSource*>(base)->set_looping(loop);
+	},
+	.flags = {},
+};
+
 class Sound : public ma_sound {
   public:
 	Sound(Sound const&) = delete;
@@ -149,20 +264,32 @@ class Sound : public ma_sound {
 	auto operator=(Sound const&) -> Sound& = delete;
 	auto operator=(Sound&&) -> Sound& = delete;
 
-	explicit Sound(ma_engine& engine, Buffer const& buffer) : ma_sound({}) {
-		m_buffer.emplace(buffer);
-		if (m_buffer->failed) {
+	explicit Sound(ma_engine& engine, Buffer const& buffer)
+		: ma_sound({}), m_storage(std::in_place_type_t<AudioBuffer>{}, buffer) {
+		if (std::get<AudioBuffer>(m_storage).failed) {
 			failed = true;
 			return;
 		}
 
-		auto const result = ma_sound_init_from_data_source(&engine, &m_buffer, 0, nullptr, this);
+		auto const result =
+			ma_sound_init_from_data_source(&engine, &std::get<AudioBuffer>(m_storage), 0, nullptr, this);
 		if (result != MA_SUCCESS) { failed = true; }
 	}
 
 	explicit Sound(ma_engine& engine, char const* path) : ma_sound({}) {
 		static constexpr auto flags_v = MA_SOUND_FLAG_STREAM;
 		auto const result = ma_sound_init_from_file(&engine, path, flags_v, nullptr, nullptr, this);
+		if (result != MA_SUCCESS) { failed = true; }
+	}
+
+	explicit Sound(ma_engine& engine, IStream& stream)
+		: ma_sound({}), m_storage(std::in_place_type_t<StreamSource>{}, stream) {
+		if (std::get<StreamSource>(m_storage).failed) {
+			failed = true;
+			return;
+		}
+		auto const result =
+			ma_sound_init_from_data_source(&engine, &std::get<StreamSource>(m_storage), 0, nullptr, this);
 		if (result != MA_SUCCESS) { failed = true; }
 	}
 
@@ -175,32 +302,46 @@ class Sound : public ma_sound {
 	bool failed{};
 
   private:
-	std::optional<AudioBuffer> m_buffer{};
+	std::variant<std::monostate, AudioBuffer, StreamSource> m_storage{};
 };
 
 class Source : public ISource {
   public:
-	explicit Source(ma_engine& engine) : m_engine(&engine) {}
+	explicit Source(ma_engine& engine) : m_engine(engine) {}
 
 	[[nodiscard]] auto is_bound() const -> bool final { return m_sound != nullptr; }
 
 	auto bind_to(Buffer const* target) -> bool final {
-		if (target == nullptr) { return false; }
+		if (target == nullptr || !target->is_loaded()) { return false; }
 		return try_create_sound(*target);
 	}
 
 	auto bind_to(std::shared_ptr<Buffer const> target) -> bool final {
 		if (!bind_to(target.get())) { return false; }
-		m_buffer = std::move(target);
+		m_ref = std::move(target);
 		return true;
 	}
 
-	auto open_stream(char const* path) -> bool final {
+	auto bind_to(IStream* target) -> bool final {
+		if (target == nullptr || target->get_channels() == 0 || target->get_sample_rate() == 0) { return false; }
+		return try_create_sound(*target);
+	}
+
+	auto bind_to(std::shared_ptr<IStream> custom_stream) -> bool final {
+		if (!bind_to(custom_stream.get())) { return false; }
+		m_ref = std::move(custom_stream);
+		return true;
+	}
+
+	auto open_file_stream(char const* path) -> bool final {
 		if (path == nullptr || *path == '\0') { return false; }
 		return try_create_sound(path);
 	}
 
-	void unbind() final { m_sound.reset(); }
+	void unbind() final {
+		m_sound.reset();
+		m_ref.reset();
+	}
 
 	[[nodiscard]] auto is_playing() const -> bool final {
 		return is_bound() && ma_sound_is_playing(m_sound.get()) == MA_TRUE;
@@ -331,11 +472,11 @@ class Source : public ISource {
 	template <typename... Args>
 	auto try_create_sound(Args&&... args) -> bool {
 		if (m_sound && is_playing()) { stop(); }
-		auto sound = std::make_unique<Sound>(*m_engine, std::forward<Args>(args)...);
+		auto sound = std::make_unique<Sound>(m_engine, std::forward<Args>(args)...);
 		if (sound->failed) { return false; }
 
 		m_sound = std::move(sound);
-		m_buffer.reset();
+		m_ref.reset();
 		copy_state_to_ma();
 		set_cursor(0s);
 		static auto const callback = +[](void* self, ma_sound* /*sound*/) { static_cast<Source*>(self)->on_end(); };
@@ -358,8 +499,8 @@ class Source : public ISource {
 		ma_sound_set_pitch(m_sound.get(), m_state.pitch);
 	}
 
-	ma_engine* m_engine{};
-	std::shared_ptr<Buffer const> m_buffer{};
+	ma_engine& m_engine;
+	std::shared_ptr<void const> m_ref{};
 	std::unique_ptr<Sound> m_sound{};
 	State m_state{};
 	std::atomic_bool m_ended{};
@@ -430,9 +571,43 @@ auto Buffer::decode_file(char const* path, std::optional<Encoding> encoding) -> 
 	if (bytes.empty()) { return false; }
 	return decode_bytes(bytes, encoding);
 }
+
+auto IStreamPipe::read_samples(std::span<float> out) -> std::size_t {
+	auto ret = drain_buffer(out);
+	assert(ret <= out.size());
+	if (ret == out.size()) { return ret; }
+	out = out.subspan(ret);
+
+	while (m_buffer.size() < out.size()) {
+		auto const prev_size = m_buffer.size();
+		push_samples(m_buffer);
+		auto const at_end = m_buffer.size() == prev_size;
+		if (at_end) { break; }
+	}
+
+	ret += drain_buffer(out);
+	return ret;
+}
+
+auto IStreamPipe::drain_buffer(std::span<float> out) -> std::size_t {
+	if (m_buffer.empty()) { return 0; }
+	auto const size = std::min(out.size(), m_buffer.size());
+	auto const src = std::span{m_buffer}.subspan(0, size);
+	auto const remain = std::span{m_buffer}.subspan(size);
+	std::ranges::copy(src, out.begin());
+	if (remain.empty()) {
+		m_buffer.clear();
+	} else {
+		m_staging.clear();
+		std::ranges::copy(remain, std::back_inserter(m_staging));
+		m_buffer.clear();
+		std::ranges::copy(m_staging, std::back_inserter(m_buffer));
+	}
+	return size;
+}
 } // namespace capo
 
-auto capo::guess_encoding(char const* path) -> std::optional<Encoding> {
+auto capo::guess_encoding(std::string_view const path) -> std::optional<Encoding> {
 	return guess_encoding_from_extension(fs::path{path}.extension().generic_string());
 }
 
