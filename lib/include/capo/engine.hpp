@@ -1,6 +1,6 @@
 #pragma once
+#include <capo/build_version.hpp>
 #include <capo/source.hpp>
-#include <capo/version.hpp>
 #include <memory>
 
 namespace capo {
