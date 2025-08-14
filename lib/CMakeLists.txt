@@ -1,8 +1,9 @@
-project(capo-lib)
+project(capo-lib VERSION ${capo_version})
 
 message(STATUS "[capo]")
 
-configure_file(src/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/include/capo/version.hpp" @ONLY)
+set(version_file "${CMAKE_CURRENT_BINARY_DIR}/include/capo/build_version.hpp")
+configure_file(src/build_version.hpp.in "${version_file}" @ONLY)
 
 add_library(${PROJECT_NAME})
 add_library(capo::capo ALIAS ${PROJECT_NAME})
@@ -20,7 +21,7 @@ target_sources(${PROJECT_NAME} PUBLIC FILE_SET HEADERS
 
 target_sources(${PROJECT_NAME} PUBLIC FILE_SET HEADERS
   BASE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/include"
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/include/capo/version.hpp"
+  FILES "${version_file}"
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
